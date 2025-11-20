@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-body">
+        <h5>Bulk Enroll — Capture multiple frames</h5>
+        <video id="video" width="640" height="480" autoplay muted playsinline class="border"></video>
+        <div class="mt-2">
+          <button id="captureMulti" class="btn btn-primary">Capture 5 Frames</button>
+          <button id="preview" class="btn btn-outline-secondary">Preview Captured</button>
+          <button id="submitEnroll" class="btn btn-success">Submit Enrollment</button>
+          <span id="status" class="ms-3"></span>
+        </div>
+        <div id="previewArea" class="mt-3 d-flex gap-2 flex-wrap"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-body">
+        <form id="enrollForm">
+          <div class="mb-3">
+            <label>Student ID</label>
+            <input class="form-control" id="student_id" required>
+          </div>
+          <div class="mb-3">
+            <label>Full Name</label>
+            <input class="form-control" id="name" required>
+          </div>
+        </form>
+        <div class="mt-2 text-muted">
+          Capture multiple frames with clear frontal face so the system stores several encodings for robust matching.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const video = document.getElementById('video');
+const captureBtn = document.getElementById('captureMulti');
+const previewBtn = document.getElementById('preview');
+const submitBtn = document.getElementById('submitEnroll');
+const statusSpan = document.getElementById('status');
+const previewArea = document.getElementById('previewArea');
+let captured = [];
+
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    video.srcObject = stream;
+  } catch (err) {
+    statusSpan.innerText = 'Camera not available or permission denied.';
+    console.error(err);
+  }
+}
+function captureOnce() {
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d', {alpha: false});
+
+  // IMPORTANT: prevent premultiplied alpha corruption
+  ctx.globalCompositeOperation = "copy";
+  ctx.imageSmoothingEnabled = true;
+
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // Force clean JPEG RGB (no alpha anywhere)
+  return canvas.toDataURL('image/jpeg', 0.95);
+}
+
+captureBtn.addEventListener('click', async () => {
+  captured = [];
+  statusSpan.innerText = 'Capturing 5 frames...';
+  for (let i=0;i<5;i++){
+    await new Promise(res=>setTimeout(res, 300)); // small delay for variation
+    captured.push(captureOnce());
+  }
+  statusSpan.innerText = 'Captured 5 frames. Preview or submit.';
+  renderPreview();
+});
+previewBtn.addEventListener('click', renderPreview);
+function renderPreview(){
+  previewArea.innerHTML = '';
+  captured.forEach(d => {
+    const img = document.createElement('img');
+    img.src = d;
+    img.style.height='80px'; img.style.margin='4px'; img.style.borderRadius='6px';
+    previewArea.appendChild(img);
+  });
+}
+submitBtn.addEventListener('click', async () => {
+  const sid = document.getElementById('student_id').value.trim();
+  const name = document.getElementById('name').value.trim();
+  if (!sid || !name) { alert('Student ID & name required'); return; }
+  if (!captured.length) { alert('Capture frames first'); return; }
+  statusSpan.innerText = 'Sending enrollment...';
+  try {
+    const resp = await fetch('{{ url_for("register_bulk_submit") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({student_id: sid, name: name, images: captured})
+    });
+    const js = await resp.json();
+    if (js.success) {
+      statusSpan.innerText = js.message || 'Enrolled';
+      captured = [];
+      previewArea.innerHTML = '';
+    } else {
+      statusSpan.innerText = js.message || 'Error';
+    }
+  } catch (e) {
+    console.error(e); statusSpan.innerText = 'Error sending enrollment';
+  }
+});
+
+initCamera();
+</script>
+{% endblock %}

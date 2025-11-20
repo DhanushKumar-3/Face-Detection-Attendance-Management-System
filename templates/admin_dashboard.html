@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block content %}
+<h4>Admin Dashboard</h4>
+
+<div class="mb-3">
+  <a class="btn btn-success me-2" href="{{ url_for('register') }}">Quick Register</a>
+  <a class="btn btn-secondary me-2" href="{{ url_for('register_bulk_page') }}">Bulk Register</a>
+  <a class="btn btn-outline-primary me-2" href="{{ url_for('view_attendance') }}">View Attendance</a>
+  <a class="btn btn-outline-dark me-2" href="{{ url_for('export_csv') }}">Export CSV</a>
+  <a class="btn btn-outline-dark" href="{{ url_for('export_pdf') }}">Export PDF</a>
+</div>
+
+<h5>Registered Users</h5>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Student ID</th>
+      <th>Name</th>
+      <th>Image</th>
+      <th>Encodings Count</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ u.student_id }}</td>
+      <td>{{ u.name }}</td>
+      <td>
+        {% if u.image_filename %}
+          <img src="{{ url_for('known_face_image', user_id=u.id) }}" alt="img" style="height:48px;border-radius:4px;">
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>{{ u.enc_count }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

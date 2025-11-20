@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>Attendance Records</h4>
+  <div>
+    <a class="btn btn-outline-dark btn-sm me-2" href="{{ url_for('export_csv') }}">Export CSV</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('export_pdf') }}">Export PDF</a>
+  </div>
+</div>
+
+<table class="table table-striped">
+  <thead>
+    <tr><th>#</th><th>Student ID</th><th>Name</th><th>Timestamp (UTC)</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    {% for r in records %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ r.student_id or '-' }}</td>
+        <td>{{ r.name or '-' }}</td>
+        <td>{{ r.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td>{{ r.status }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

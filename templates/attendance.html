@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5>Camera</h5>
+        <video id="video" width="640" height="480" autoplay muted playsinline class="border"></video>
+        <div class="mt-3">
+          <button id="snap" class="btn btn-success">Capture & Mark Attendance</button>
+          <span id="status" class="ms-3"></span>
+        </div>
+        <div id="results" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body text-muted">
+        <h6>Instructions</h6>
+        <ol>
+          <li>Allow the browser to use your camera.</li>
+          <li>Position the face clearly in front of the camera.</li>
+          <li>Click capture to mark attendance. If matched, thumbnail and confidence will appear.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const video = document.getElementById('video');
+const snap = document.getElementById('snap');
+const statusSpan = document.getElementById('status');
+const resultsDiv = document.getElementById('results');
+
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    video.srcObject = stream;
+  } catch (err) {
+    statusSpan.innerText = 'Camera permission denied or no camera available.';
+    console.error(err);
+  }
+}
+
+function captureImage() {
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg');
+}
+
+snap.addEventListener('click', async () => {
+  statusSpan.innerText = 'Capturing...';
+  const dataUrl = captureImage();
+  statusSpan.innerText = 'Sending for recognition...';
+  try {
+    const formData = new FormData();
+    formData.append('image', dataUrl);
+    const resp = await fetch('/attendance/mark', {
+      method: 'POST',
+      body: formData
+    });
+    const json = await resp.json();
+    if (json.success) {
+      statusSpan.innerText = 'Recognition complete';
+      displayResults(json.matches);
+    } else {
+      statusSpan.innerText = 'No match: ' + json.message;
+    }
+  } catch (err) {
+    console.error(err);
+    statusSpan.innerText = 'Error sending image.';
+  }
+});
+
+function displayResults(matches) {
+  resultsDiv.innerHTML = '';
+  matches.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'card mb-2';
+    const bd = document.createElement('div');
+    bd.className = 'card-body d-flex align-items-center';
+    const left = document.createElement('div');
+    left.style.width='96px';
+    if (m.thumbnail) {
+      const img = document.createElement('img');
+      img.src = m.thumbnail;
+      img.style.height='80px'; img.style.borderRadius='6px';
+      left.appendChild(img);
+    } else {
+      left.innerHTML = '<div style="height:80px;width:80px;background:#eee;border-radius:6px;display:flex;align-items:center;justify-content:center;">?</div>';
+    }
+    const middle = document.createElement('div');
+    middle.className = 'ms-3';
+    middle.innerHTML = `<div><strong>${m.name || 'Unknown'}</strong> <small class="text-muted">(${m.student_id||''})</small></div>
+                        <div>Confidence: <strong>${m.confidence_pct}%</strong></div>`;
+    const right = document.createElement('div');
+    right.className = 'ms-auto text-end';
+    if (m.matched) {
+      if (m.deduped) {
+        right.innerHTML = '<span class="badge bg-warning">Already marked today</span>';
+      } else {
+        right.innerHTML = '<span class="badge bg-success">Marked present</span>';
+      }
+    } else {
+      right.innerHTML = '<span class="badge bg-danger">Unknown</span>';
+    }
+    bd.appendChild(left);
+    bd.appendChild(middle);
+    bd.appendChild(right);
+    card.appendChild(bd);
+    resultsDiv.appendChild(card);
+  });
+}
+
+initCamera();
+</script>
+{% endblock %}

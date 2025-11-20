@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="text-center py-5">
+    <h1 class="display-6 fw-bold">Face Recognition Attendance System</h1>
+    <p class="lead text-muted">Manage registrations, capture attendance, export reports — all with secure admin login.</p>
+
+    {% if session.get('admin_logged_in') %}
+        <div class="mt-4 d-flex justify-content-center gap-3">
+            <a class="btn btn-primary btn-lg" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+            <a class="btn btn-success btn-lg" href="{{ url_for('attendance') }}">Take Attendance</a>
+        </div>
+    {% else %}
+        <div class="mt-4">
+            <a class="btn btn-primary btn-lg" href="{{ url_for('login') }}">Admin Login</a>
+        </div>
+    {% endif %}
+</div>
+
+<div class="container mt-5">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="fw-bold">🔐 Secure Admin Login</h5>
+                    <p class="text-muted">Only authorized users can register students, manage data, or take attendance.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="fw-bold">📸 Face Recognition Engine</h5>
+                    <p class="text-muted">Real-time recognition using multiple encodings per student, high confidence detection.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="fw-bold">📄 Export Reports</h5>
+                    <p class="text-muted">Download clean attendance reports in CSV or PDF format anytime.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
